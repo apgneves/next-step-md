@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next Step MD tests</title>
+<style>
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;max-width:860px;margin:0 auto;padding:16px;color:#1f2a2e;background:#f6f4ef}
+  h1{font-size:22px} h2{font-size:16px;margin:18px 0 6px}
+  .sum{padding:10px 14px;border-radius:10px;font-weight:700}
+  .sum.ok{background:#dcefeb;color:#14524f} .sum.bad{background:#fbe3e0;color:#7d2a22}
+  li{margin:2px 0;font-size:14px} .pass{color:#1f6f6b} .fail{color:#9b2c22;font-weight:700}
+  code{font-size:12.5px}
+</style>
+</head>
+<body>
+<h1>Next Step MD: logic and storage tests</h1>
+<p>Runs assertions on <code>js/logic/*</code>, <code>js/data/badges.js</code> and <code>js/storage.js</code>. Uses a separate storage key, so your real data is not touched. The clock is fixed to 2026-11-20.</p>
+<div id="summary" class="sum">Running...</div>
+<div id="out"></div>
+
+<script src="../js/config.js"></script>
+<script>NS.config.STORAGE_KEY = 'nextstepmd.test';</script>
+<script src="../js/util.js"></script>
+<script src="../js/icons.js"></script>
+<script src="../js/storage.js"></script>
+<script src="../js/data/resources.js"></script>
+<script src="../js/data/strategies.js"></script>
+<script src="../js/data/quiz.js"></script>
+<script src="../js/data/learn.js"></script>
+<script src="../js/data/badges.js"></script>
+<script src="../js/logic/stats.js"></script>
+<script src="../js/logic/suggest.js"></script>
+<script src="../js/logic/quizEngine.js"></script>
+<script>
+(function () {
+  const U = NS.util, S = NS.storage, ST = NS.logic.stats, SG = NS.logic.suggest, QE = NS.logic.quizEngine;
+  const TODAY = '2026-11-20';
+  U.now = () => new Date(2026, 10, 20, 12, 0, 0);
+
+  const out = document.getElementById('out');
+  let pass = 0, fail = 0, group = null;
+  function section(name) { const h = document.createElement('h2'); h.textContent = name; out.appendChild(h); group = document.createElement('ul'); out.appendChild(group); }
+  function ok(cond, msg) {
+    const li = document.createElement('li');
+    li.className = cond ? 'pass' : 'fail';
+    li.textContent = (cond ? 'PASS ' : 'FAIL ') + msg;
+    group.appendChild(li);
+    cond ? pass++ : fail++;
+  }
+  const eq = (a, b, msg) => ok(JSON.stringify(a) === JSON.stringify(b), msg + ' (got ' + JSON.stringify(a) + ', expected ' + JSON.stringify(b) + ')');
+  function test(name, fn) { try { fn(); } catch (e) { ok(false, name + ' threw: ' + e.message); } }
+
+  // Build a state with check-ins on given day offsets from TODAY.
+  function withCheckins(list) {
+    const s = S.defaultState();
+    s.checkins = list.map(c => Object.assign({ usedCoping: false, strategy: '', note: '' }, c, { date: U.addDays(TODAY, c.off) }));
+    s.checkins.forEach(c => delete c.off);
+    return S.normalize(s);
+  }
+
+  // ---------------- util ----------------
+  section('util.js');
+  test('util', () => {
+    eq(U.addDays('2026-11-30', 1), '2026-12-01', 'addDays crosses month');
+    eq(U.addDays('2026-03-01', -1), '2026-02-28', 'addDays crosses February');
+    eq(U.daysBetween('2026-11-01', '2026-11-20'), 19, 'daysBetween');
+    eq(U.escapeHTML('<b>"x" & \'y\'</b>'), '&lt;b&gt;&quot;x&quot; &amp; &#39;y&#39;&lt;/b&gt;', 'escapeHTML');
+    const a = U.seededRandom('2026-11-20'), b = U.seededRandom('2026-11-20'), c = U.seededRandom('2026-11-21');
+    const ra = [a(), a(), a()], rb = [b(), b(), b()], rc = [c(), c(), c()];
+    eq(ra, rb, 'seededRandom is deterministic');
+    ok(JSON.stringify(ra) !== JSON.stringify(rc), 'seededRandom differs by seed');
+    eq(U.cleanText('  a   b  '), 'a b', 'cleanText trims and collapses spaces');
+    eq(U.cleanText('x'.repeat(400)).length, 300, 'cleanText caps at 300');
+  });
+
+  // ---------------- storage ----------------
+  section('storage.js');
+  test('storage', () => {
+    localStorage.removeItem(NS.config.STORAGE_KEY);
+    const d = S.load();
+    eq(d.version, 1, 'missing key returns default state');
+    eq(d.checkins, [], 'default has no check-ins');
+
+    localStorage.setItem(NS.config.STORAGE_KEY, '{not valid json');
+    let threw = false, st;
+    try { st = S.load(); } catch (e) { threw = true; }
+    ok(!threw && st.version === 1, 'corrupt JSON loads defaults without throwing');
+
+    localStorage.setItem(NS.config.STORAGE_KEY, '"just a string"');
+    eq(S.load().plan.stepsDone, [], 'non-object JSON loads defaults');
+
+    // Prototype-era data under the same key.
+    localStorage.setItem(NS.config.STORAGE_KEY, JSON.stringify({ checkins: [{ mood: 2, crave: 8 }], goalsDone: 3, coping: ['x'], copingSel: [0], badges: [{ i: '1', on: 1 }], custom: 'kept' }));
+    const m = S.load();
+    eq(m.checkins.length, 0, 'migrate drops prototype check-ins without dates');
+    eq(m.badges, {}, 'migrate replaces prototype badge array');
+    eq(m.custom, 'kept', 'migrate keeps unknown fields');
+
+    const s = S.defaultState();
+    s.plan.reasons = ['  Stay in school  ', 'x'.repeat(500)];
+    s.checkins = [{ date: '2026-11-19', mood: 3, craving: 4 }, { date: '2026-11-19', mood: 5, craving: 1 }, { date: 'bad', mood: 3, craving: 3 }, { date: '2026-11-18', mood: 9, craving: 3 }];
+    const n = S.normalize(s);
+    eq(n.checkins.length, 1, 'normalize keeps one check-in per date and drops invalid ones');
+    eq(n.checkins[0].mood, 5, 'last check-in for a date wins');
+    eq(n.plan.reasons[0], 'Stay in school', 'free text is trimmed');
+    eq(n.plan.reasons[1].length, 300, 'free text is capped at 300');
+
+    ok(S.save(n), 'save returns true');
+    eq(S.load().checkins, n.checkins, 'state persists across reload (save then load)');
+
+    // Export/import round trip (export uses JSON.stringify of the state).
+    const demo = S.seedDemo(TODAY);
+    const back = S.parseBackup(JSON.stringify(demo));
+    eq(back, S.normalize(demo), 'export/import round-trips');
+    let bad1 = false; try { S.parseBackup('{oops'); } catch (e) { bad1 = true; }
+    let bad2 = false; try { S.parseBackup('{"hello":1}'); } catch (e) { bad2 = true; }
+    ok(bad1 && bad2, 'import rejects invalid files');
+
+    S.save(demo);
+    const fresh = S.deleteAll();
+    eq(localStorage.getItem(NS.config.STORAGE_KEY), null, 'deleteAll removes the key');
+    eq([fresh.checkins.length, Object.keys(fresh.badges).length, ST.goalsDone(fresh)], [0, 0, 0], 'deleteAll returns zero stats');
+
+    eq([demo.demo, demo.checkins.length], [true, 14], 'seedDemo: 14 days of sample data, demo flag set');
+    ok(!demo.checkins.some(c => c.date === TODAY), 'seedDemo leaves today open for a live check-in');
+    ok(!!demo.badges['first-checkin'] && !!demo.badges['streak-7'] && !demo.badges['plan-finished'], 'seedDemo back-fills earned badges and leaves plan-finished to unlock');
+    eq(demo.quiz.days.filter(x => x.completed).length, 4, 'seedDemo has 4 completed quiz days');
+  });
+
+  // ---------------- stats ----------------
+  section('logic/stats.js');
+  test('stats', () => {
+    const s = withCheckins([{ off: 0, mood: 3, craving: 4 }, { off: -1, mood: 3, craving: 4 }, { off: -2, mood: 3, craving: 4 }, { off: -4, mood: 3, craving: 4 }, { off: -25, mood: 3, craving: 4 }]);
+    eq(ST.checkinsThisMonth(s, TODAY), 4, 'check-ins this month counts only the current calendar month');
+    eq(ST.currentStreak(s, TODAY), 3, 'current streak ending today');
+    const y = withCheckins([{ off: -1, mood: 3, craving: 4 }, { off: -2, mood: 3, craving: 4 }]);
+    eq(ST.currentStreak(y, TODAY), 2, 'current streak ending yesterday when today has no check-in');
+    eq(ST.currentStreak(withCheckins([{ off: -3, mood: 3, craving: 4 }]), TODAY), 0, 'streak is 0 after a gap, but...');
+    eq(ST.checkinsThisMonth(withCheckins([{ off: -3, mood: 3, craving: 4 }]), TODAY), 1, '...a missed day does not reset check-ins this month');
+    const b = withCheckins([-20, -19, -18, -17, -16, -15, -14, -13, -5, -4].map(off => ({ off, mood: 3, craving: 4 })));
+    eq(ST.bestStreak(b), 8, 'best streak is the longest run ever');
+    eq(ST.dateOfStreak(b, 7), U.addDays(TODAY, -14), 'date a 7-day streak was reached');
+
+    const demo = S.seedDemo(TODAY);
+    eq(ST.cravingTrend(demo, TODAY).pct, -45, 'craving trend: first 7 (avg 7) vs latest 7 (avg 4) = -45% rounded to 5');
+    eq(ST.cravingTrend(demo, TODAY).basis, 'first-week', 'trend uses first-week basis with 14+ check-ins');
+    const wk = withCheckins([{ off: 0, mood: 3, craving: 6 }, { off: -1, mood: 3, craving: 6 }, { off: -2, mood: 3, craving: 6 }, { off: -8, mood: 3, craving: 4 }, { off: -9, mood: 3, craving: 4 }, { off: -10, mood: 3, craving: 4 }]);
+    eq(ST.cravingTrend(wk, TODAY).pct, 50, 'trend falls back to last 7 days vs previous 7 days');
+    eq(ST.cravingTrend(withCheckins([{ off: 0, mood: 3, craving: 6 }, { off: -8, mood: 3, craving: 4 }]), TODAY), null, 'no trend without 3+ check-ins in each week');
+
+    const mu = withCheckins([{ off: -1, mood: 3, craving: 4, strategy: 'walk-10' }, { off: -2, mood: 3, craving: 4, strategy: 'urge-surf' }, { off: -3, mood: 3, craving: 4, strategy: 'walk-10' }, { off: -4, mood: 3, craving: 4, strategy: 'urge-surf' }, { off: -40, mood: 3, craving: 4, strategy: 'halt' }, { off: -41, mood: 3, craving: 4, strategy: 'halt' }, { off: -42, mood: 3, craving: 4, strategy: 'halt' }]);
+    eq(ST.mostUsedStrategy(mu, TODAY).id, 'walk-10', 'most-used strategy: last 30 days only, tie broken by most recent use');
+
+    eq(ST.insights(withCheckins([{ off: 0, mood: 3, craving: 4 }]), TODAY), [], 'no insights under 7 check-ins');
+    const ins = ST.insights(demo, TODAY);
+    ok(ins[0] === 'Cravings are down 45% compared with your first week.', 'insight wording for falling cravings: ' + ins[0]);
+    ok(/most-used strategy is Text someone from my list/.test(ins[1]), 'most-used strategy insight');
+    const up = withCheckins([0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13].map((off, i) => ({ off, mood: 3, craving: i < 7 ? 8 : 3 })));
+    eq(ST.insights(up, TODAY)[0], 'Cravings have been higher this week. Your plan has strategies that can help.', 'rising cravings use non-judgmental wording');
+
+    const ser = ST.series(withCheckins([{ off: 0, mood: 4, craving: 2 }, { off: -2, mood: 2, craving: 7 }]), 14, TODAY);
+    eq(ser.length, 14, 'series has one entry per day');
+    eq([ser[11].mood, ser[12].mood, ser[13].mood], [2, null, 4], 'missing days are gaps (null), not zeros');
+  });
+
+  // ---------------- suggest ----------------
+  section('logic/suggest.js');
+  test('suggest', () => {
+    const base = S.seedDemo(TODAY);
+    const at = (craving, mood) => SG.forCheckin(base, { date: TODAY, mood: mood || 3, craving });
+    const c7 = at(7);
+    ok(c7.tough && !c7.urgent, 'craving 7 shows the support card without the 988/911 line');
+    ok(!!c7.strategy && base.plan.coping.indexOf(c7.strategy) !== -1, 'support card offers a strategy from the plan');
+    eq(c7.people.length, 2, 'support card shows the first two people');
+    const c9 = at(9);
+    ok(c9.tough && c9.urgent, 'craving 9 adds the 988/911 line');
+    const c3 = at(3, 4);
+    ok(!c3.tough && !c3.urgent && !c3.highStreak && !SG.isActive(c3), 'craving 3 shows nothing');
+    ok(at(2, 2).tough && !at(2, 2).urgent, 'mood 2 shows the support card');
+    ok(at(2, 1).urgent, 'mood 1 adds the 988/911 line');
+    const d1 = SG.forCheckin(base, { date: '2026-11-20', mood: 2, craving: 8 }).strategy;
+    const d2 = SG.forCheckin(base, { date: '2026-11-21', mood: 2, craving: 8 }).strategy;
+    ok(d1 !== d2, 'suggested strategy rotates day to day');
+
+    const hs = withCheckins([{ off: 0, mood: 3, craving: 7 }, { off: -1, mood: 3, craving: 8 }, { off: -3, mood: 3, craving: 9 }]);
+    ok(SG.forCheckin(hs, hs.checkins[2]).highStreak, '3 check-ins in a row with craving >= 7 shows the counselor prompt');
+    const hs2 = withCheckins([{ off: 0, mood: 3, craving: 7 }, { off: -1, mood: 3, craving: 5 }, { off: -2, mood: 3, craving: 9 }]);
+    ok(!SG.forCheckin(hs2, hs2.checkins[2]).highStreak, 'no counselor prompt when the run is broken');
+    const empty = withCheckins([{ off: 0, mood: 3, craving: 2 }]);
+    ok(SG.forCheckin(empty, empty.checkins[0]).noCoping, 'empty plan suggests starter strategies');
+    eq(NS.data.starterStrategies, ['urge-surf', 'text-someone'], 'starter strategies are Urge surfing and Text someone');
+  });
+
+  // ---------------- badges ----------------
+  section('data/badges.js');
+  test('badges', () => {
+    const earned = s => { NS.data.evaluateBadges(s, TODAY); return s.badges; };
+    function thresh(id, below, at) {
+      ok(!earned(below)[id], id + ': locked below threshold');
+      ok(!!earned(at)[id], id + ': unlocks at threshold');
+    }
+    const days = n => withCheckins(Array.from({ length: n }, (_, i) => ({ off: -i, mood: 3, craving: 3 })));
+    const spread = n => withCheckins(Array.from({ length: n }, (_, i) => ({ off: -i * 2, mood: 3, craving: 3 })));
+    thresh('first-checkin', days(0), days(1));
+    thresh('streak-7', days(6), days(7));
+    thresh('checkins-30', spread(29), spread(30));
+    const plan = steps => { const s = S.defaultState(); s.plan.stepsDone = steps; return s; };
+    thresh('plan-finished', plan([1, 2, 3, 4, 5]), plan([1, 2, 3, 4, 5, 6]));
+    const ev = (k, v) => { const s = S.defaultState(); s.events[k] = v; return s; };
+    thresh('reached-out', ev('reachedOut', 0), ev('reachedOut', 1));
+    thresh('first-meeting', ev('meetings', 0), ev('meetings', 1));
+    const goal = done => { const s = S.defaultState(); s.plan.goals = [{ id: 'g', text: 'x', term: 'short', done, doneAt: done ? TODAY : null }]; return s; };
+    thresh('goal-done', goal(false), goal(true));
+    const quizDays = n => { const s = S.defaultState(); s.quiz.days = Array.from({ length: n }, (_, i) => ({ date: U.addDays(TODAY, -i), questions: ['q01', 'q02', 'q03'], firstTry: [true, false, true], completed: true })); return s; };
+    thresh('learning-5', quizDays(4), quizDays(5));
+    const uses = n => withCheckins(Array.from({ length: 12 }, (_, i) => ({ off: -i, mood: 3, craving: 3, usedCoping: i < n })));
+    thresh('strategy-10', uses(9), uses(10));
+
+    // Badges never disappear.
+    const s = goal(true); earned(s);
+    s.plan.goals[0].done = false;
+    NS.data.evaluateBadges(s, TODAY);
+    ok(!!s.badges['goal-done'], 'badges are never taken away when the condition stops being true');
+    const s2 = days(7); earned(s2); s2.checkins = []; NS.data.evaluateBadges(s2, TODAY);
+    ok(!!s2.badges['streak-7'] && !!s2.badges['first-checkin'], 'badges stay even if check-ins are removed');
+    const again = NS.data.evaluateBadges(s2, TODAY);
+    eq(again.length, 0, 'already-earned badges are not reported again');
+    eq(NS.data.badges.length, 9, 'all 9 badges from spec 7.4 are defined');
+  });
+
+  // ---------------- quiz ----------------
+  section('logic/quizEngine.js');
+  test('quiz', () => {
+    const bank = NS.data.quiz;
+    ok(bank.length >= 30, 'quiz bank has at least 30 questions (' + bank.length + ')');
+    ok(bank.every(q => q.options.indexOf(q.answer) !== -1), 'every answer is one of its options');
+    ok(new Set(bank.map(q => q.id)).size === bank.length, 'question ids are unique');
+    ok(bank.every(q => q.source && q.explanation && q.learnLink), 'every question has a source, explanation and learn link');
+
+    const p1 = QE.pick(bank, [], '2026-11-20'), p2 = QE.pick(bank, [], '2026-11-20'), p3 = QE.pick(bank, [], '2026-11-21');
+    eq(p1.ids, p2.ids, 'same 3 questions for the same date (reload)');
+    ok(JSON.stringify(p1.ids) !== JSON.stringify(p3.ids), 'different set the next day');
+    const topics = p1.ids.map(id => NS.data.quizById(id).topic);
+    eq(new Set(topics).size, 3, 'no two questions from the same topic on one day');
+
+    const s = S.defaultState();
+    const day = QE.getOrCreateDay(s, TODAY).day;
+    eq(QE.getOrCreateDay(s, TODAY).day.questions, day.questions, 'stored day is reused on reload');
+    day.questions.forEach(id => QE.markSeen(s, id));
+    const qa = NS.data.quizById(day.questions[0]);
+    const wrong = qa.options.find(o => o !== qa.answer);
+    QE.answer(s, TODAY, 0, wrong);
+    QE.answer(s, TODAY, 0, qa.answer); // replay / second try
+    eq(day.firstTry[0], false, 'only the first answer is recorded (replays do not change firstTry)');
+    ok(!day.completed, 'day not completed until all 3 are answered');
+    QE.answer(s, TODAY, 1, NS.data.quizById(day.questions[1]).answer);
+    const r = QE.answer(s, TODAY, 2, NS.data.quizById(day.questions[2]).answer);
+    ok(day.completed && r.completedNow, 'day completed after 3 answers');
+    eq(day.firstTry, [false, true, true], 'firstTry stored per question');
+
+    const next = QE.getOrCreateDay(s, '2026-11-21').day;
+    ok(next.questions.every(id => day.questions.indexOf(id) === -1), 'next day prefers unseen questions');
+
+    const allSeen = bank.map(q => q.id);
+    const cyc = QE.pick(bank, allSeen, '2026-11-22');
+    eq([cyc.ids.length, cyc.seen.length], [3, 0], 'new cycle starts (seen cleared) when every question has been seen');
+    const leftover = bank.map(q => q.id).filter(id => id !== 'q05');
+    const cyc2 = QE.pick(bank, leftover, '2026-11-22');
+    ok(cyc2.ids[0] === 'q05' || cyc2.ids.indexOf('q05') !== -1, 'leftover unseen question is used first in the new cycle');
+
+    const demo = S.seedDemo(TODAY);
+    const a1 = QE.firstTryAccuracy(demo, 'first-week'), a2 = QE.firstTryAccuracy(demo, 'latest-week');
+    ok(a1 && a2 && a2.pct > a1.pct, 'firstTryAccuracy: latest week (' + (a2 && a2.pct) + '%) vs first week (' + (a1 && a1.pct) + '%)');
+    eq(QE.firstTryAccuracy(S.defaultState(), 'all'), null, 'firstTryAccuracy is null with no quiz data');
+  });
+
+  // ---------------- content ----------------
+  section('Content');
+  test('content', () => {
+    const allText = JSON.stringify([NS.data.quiz, NS.data.learn, NS.data.resources, NS.data.strategies, NS.data.sources]);
+    ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}\u{FE0F}]/u.test(allText), 'no emoji code points in content');
+    ok(!/\b(addict|addicts|abuser|abusers)\b/i.test(allText), 'person-first language (no "addict" or "abuser")');
+    const visible = JSON.stringify([NS.data.quiz.map(q => [q.prompt, q.options, q.explanation, q.source]), NS.data.learn, NS.data.resources.map(r => [r.name, r.description, r.expect, r.contact])]);
+    ok(visible.indexOf('TODO-VERIFY') === -1, 'no TODO-VERIFY in user-visible text');
+    const learnCites = JSON.stringify(NS.data.learn).match(/\[\[([^\]]+)\]\]/g) || [];
+    ok(learnCites.every(c => NS.data.sources.some(s => s.key === c.slice(2, -2))), 'every Learn citation matches a source');
+    NS.data.learn.filter(sec => sec.body).forEach(sec => {
+      const words = sec.body.join(' ').replace(/\[\[[^\]]+\]\]/g, '').split(/\s+/).filter(Boolean).length;
+      ok(words >= 80 && words <= 150, 'Learn section "' + sec.title + '" is 80-150 words (' + words + ')');
+    });
+    ok(NS.data.learn.find(s => s.id === 'myths').flipCards.join() === 'q01,q02,q04,q09,q14', 'myth/fact flip cards reuse q01, q02, q04, q09, q14');
+  });
+
+  localStorage.removeItem(NS.config.STORAGE_KEY);
+  const sum = document.getElementById('summary');
+  sum.textContent = (fail ? fail + ' failed, ' : 'All passed: ') + pass + ' passed';
+  sum.className = 'sum ' + (fail ? 'bad' : 'ok');
+  document.title = (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail) + ' | Next Step MD tests';
+  window.TEST_RESULT = { pass, fail };
+})();
+</script>
+</body>
+</html>

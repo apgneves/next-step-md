@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next Step MD: Student Recovery</title>
+<style>
+  :root{
+    --bg:#f6f4ef; --card:#ffffff; --ink:#1f2a2e; --muted:#5d6b70;
+    --teal:#1f6f6b; --teal-soft:#dcefeb; --amber:#e8a33d; --amber-soft:#fbefd9;
+    --rose:#b8493f; --line:#e4e0d6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+  .crisis{background:var(--rose);color:#fff;font-size:12.5px;padding:7px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .crisis b{font-weight:700}
+  .crisis a{color:#fff;font-weight:700;text-decoration:underline}
+  header{padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-weight:800;font-size:18px;letter-spacing:-.2px}
+  .logo span{color:var(--teal)}
+  .pill{font-size:11px;background:var(--teal-soft);color:var(--teal);padding:3px 8px;border-radius:999px;font-weight:600}
+  main{padding:6px 16px 90px;max-width:560px;margin:0 auto}
+  h1{font-size:24px;line-height:1.2;margin:10px 0 6px;letter-spacing:-.3px}
+  h2{font-size:17px;margin:18px 0 8px}
+  p.sub{color:var(--muted);margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .big-btn{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;text-decoration:none;color:var(--ink)}
+  .big-btn .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
+  .big-btn b{display:block;font-size:15.5px}
+  .big-btn small{color:var(--muted)}
+  .t{background:var(--teal-soft)} .a{background:var(--amber-soft)} .r{background:#f6dedb}
+  .streak{display:flex;gap:10px}
+  .streak .card{flex:1;text-align:center;padding:12px 8px}
+  .streak .n{font-size:24px;font-weight:800;color:var(--teal)}
+  .streak small{color:var(--muted);font-size:12px}
+  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 12px}
+  nav a{text-decoration:none;color:var(--muted);font-size:11px;text-align:center;flex:1}
+  nav a div{height:22px;display:flex;justify-content:center}
+  nav a.on{color:var(--teal);font-weight:700}
+  .steps{display:flex;gap:5px;margin:4px 0 14px}
+  .steps i{flex:1;height:5px;border-radius:5px;background:var(--line)}
+  .steps i.done{background:var(--teal)}
+  label.q{font-weight:700;display:block;margin:12px 0 6px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:13.5px}
+  .chip.sel{background:var(--teal);border-color:var(--teal);color:#fff}
+  .person{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .person:first-of-type{border-top:0}
+  .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:var(--teal);flex:none}
+  .person small{color:var(--muted);display:block}
+  .btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;background:var(--teal);color:#fff;margin-top:10px}
+  .btn.ghost{background:#fff;color:var(--teal);border:1.5px solid var(--teal)}
+  .slider{display:flex;gap:4px;margin-top:4px}
+  .slider span{flex:1;text-align:center;font-size:12px;padding:7px 0;border-radius:8px;background:#f0ede6;color:var(--muted)}
+  .slider span.sel{background:var(--amber);color:#fff;font-weight:700}
+  .slider.mood span{padding:9px 0;font-size:14px}
+  .slider.mood span.sel{background:var(--teal)}
+  .scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+  .moods{display:flex;justify-content:space-between}
+  .moods span{font-size:27px;padding:5px 8px;border-radius:12px;opacity:.45}
+  .moods span.sel{opacity:1;background:var(--teal-soft)}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:4px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .badges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .badge{text-align:center;font-size:11px;color:var(--muted)}
+  .badge div{width:48px;height:48px;margin:0 auto 4px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:800;color:#9a5f10;background:var(--amber-soft);border:2px solid var(--amber)}
+  .badge.locked div{background:#eee;border-color:#ddd;filter:grayscale(1);opacity:.5}
+  .note{font-size:12.5px;color:var(--muted);background:var(--teal-soft);border-radius:12px;padding:10px 12px}
+  .opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px;margin-top:8px;font-size:14.5px}
+  .opt.right{border-color:var(--teal);background:var(--teal-soft);font-weight:700}
+  .opt.wrong{border-color:#e7c9c5;color:var(--muted)}
+  .explain{border-left:4px solid var(--teal);background:#fff;padding:10px 12px;border-radius:0 12px 12px 0;margin-top:12px;font-size:13.5px}
+  .res{display:flex;gap:10px}
+  .res .tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--teal-soft);color:var(--teal);margin-right:4px}
+  .view{display:none}.view.on{display:block}
+  .demo{font-size:11px;color:var(--muted);text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="crisis"><span>Need help now? <b>Call or text <a href="tel:988">988</a></b></span><span>24/7 · free</span></div>
+<header><div class="logo">Next Step <span>MD</span></div><span class="pill">Private · no login</span></header>
+
+<main>
+<!-- HOME -->
+<section class="view" id="home">
+  <h1>You don't have to have it figured out to start.</h1>
+  <p class="sub">A private space for Maryland college students dealing with substance use or working on recovery.</p>
+  <div class="streak">
+    <div class="card"><div class="n" id="chkStreak">0</div><small>check-in streak</small></div>
+    <div class="card"><div class="n" id="goalCount">0</div><small>goals done</small></div>
+    <div class="card"><div class="n" id="badgeCount">0</div><small>badges</small></div>
+  </div>
+  <a class="big-btn" href="#plan"><span class="ic t" style="color:#1f6f6b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></span><span><b>Make my recovery plan</b><small>Goals, triggers, coping, my people</small></span></a>
+  <a class="big-btn" href="#checkin"><span class="ic a" style="color:#b9771a"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span><b>Daily check-in</b><small>30 seconds: mood and cravings</small></span></a>
+  <a class="big-btn" href="#quiz"><span class="ic t" style="color:#1f6f6b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><span><b>Today's 3-question quiz</b><small>Myths vs. facts about addiction</small></span></a>
+  <a class="big-btn" href="#help"><span class="ic r" style="color:#b8493f"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><span><b>Find help near me</b><small>Counseling, treatment, peer groups</small></span></a>
+</section>
+
+<!-- PLAN -->
+<section class="view" id="plan">
+  <h1>My recovery plan</h1>
+  <div class="steps"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i></i><i></i></div>
+  <p class="sub">Step 4 of 6 · Coping strategies I'll use</p>
+  <div class="card">
+    <label class="q" style="margin-top:0">When a craving hits, I will…</label>
+    <div class="chips" id="copeChips"></div>
+    <label class="q">My triggers (from step 3)</label>
+    <div class="chips"><span class="chip sel">Exam stress</span><span class="chip sel">Weekend parties</span><span class="chip sel">Being alone at night</span></div>
+  </div>
+  <div class="card">
+    <label class="q" style="margin-top:0">People I can count on</label>
+    <div class="person"><span class="av">J</span><span><b>Jordan (roommate)</b><small>Will go to the gym with me</small></span></div>
+    <div class="person"><span class="av" style="background:var(--amber)">M</span><span><b>Mom</b><small>Call any time, no questions</small></span></div>
+    <div class="person"><span class="av" style="background:#6b5ea8">C</span><span><b>Campus counselor</b><small>Weekly appointment, Tuesdays</small></span></div>
+  </div>
+  <button class="btn">Save and continue</button>
+  <button class="btn ghost">Download my plan (PDF)</button>
+</section>
+
+<!-- CHECK-IN / PROGRESS -->
+<section class="view" id="checkin">
+  <h1>Daily check-in</h1>
+  <div class="card">
+    <label class="q" style="margin-top:0">How's your mood today?</label>
+    <div class="slider mood"><span>1</span><span>2</span><span>3</span><span class="sel">4</span><span>5</span></div><div class="scale"><span>Rough</span><span>Great</span></div>
+    <label class="q">Craving level</label>
+    <div class="slider" id="crave"></div>
+    <button class="btn">Save check-in</button>
+  </div>
+  <h2>My last 14 days</h2>
+  <div class="card">
+    <svg id="chart" viewBox="0 0 320 130" width="100%"></svg>
+    <div class="legend"><span><i style="background:var(--teal)"></i>Mood</span><span><i style="background:var(--amber)"></i>Cravings</span></div>
+  </div>
+  <div class="note">Cravings are down 40% since your first week. Most-used strategy: <b>text someone from my list</b>.</div>
+  <h2>Milestones</h2>
+  <div class="badges" id="badges"></div>
+</section>
+
+<!-- QUIZ -->
+<section class="view" id="quiz">
+  <h1>Today's quiz</h1>
+  <div class="steps"><i class="done"></i><i class="done"></i><i></i></div>
+  <p class="sub">Question 2 of 3 · Myth or fact?</p>
+  <div class="card">
+    <b style="font-size:16.5px">"If someone relapses, it means their treatment failed."</b>
+    <button class="opt">Fact</button>
+    <button class="opt right">Myth (correct)</button>
+    <div class="explain"><b>Here's the surprising part:</b> relapse rates for substance use disorders are similar to those for other chronic illnesses like asthma and high blood pressure. A slip is a signal to adjust the plan, not proof that recovery is impossible. <a href="#" style="color:var(--teal)">Learn more →</a></div>
+  </div>
+  <button class="btn">Next question</button>
+  <p class="demo">Badge for effort, not score: 5 days of learning earns a badge</p>
+</section>
+
+<!-- HELP -->
+<section class="view" id="help">
+  <h1>Find help</h1>
+  <div class="chips" style="margin-bottom:12px"><span class="chip sel">All</span><span class="chip">Free</span><span class="chip">Peer groups</span><span class="chip">Virtual</span><span class="chip">Crisis</span></div>
+  <div class="card res"><div><span class="tag">CRISIS</span><span class="tag">24/7</span><br><b>988 Suicide &amp; Crisis Lifeline</b><br><small>Call or text 988. Covers substance use crises too, routed to a Maryland call center.</small></div></div>
+  <div class="card res"><div><span class="tag">FREE</span><span class="tag">24/7</span><br><b>SAMHSA National Helpline</b><br><small>1-800-662-4357 · confidential treatment referrals</small></div></div>
+  <div class="card res"><div><span class="tag">PEER</span><span class="tag">CAMPUS</span><br><b>Collegiate recovery programs</b><br><small>Terps for Recovery (UMD), Tigers in Recovery (Towson), Scholars for Recovery (UMB)</small></div></div>
+  <div class="card res"><div><span class="tag">PEER</span><span class="tag">VIRTUAL</span><br><b>SMART Recovery &amp; AA/NA meetings</b><br><small>In-person and online meetings across Maryland</small></div></div>
+</section>
+</main>
+
+<nav>
+  <a href="#home" data-v="home"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>Home</a>
+  <a href="#plan" data-v="plan"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></div>Plan</a>
+  <a href="#checkin" data-v="checkin"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M5 15l4-4 3 3 6-7"/></svg></div>Progress</a>
+  <a href="#quiz" data-v="quiz"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></div>Learn</a>
+  <a href="#help" data-v="help"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div>Help</a>
+</nav>
+
+<script>
+// ---- storage (device-only; wrapped in try/catch) ----
+const KEY = 'nextstepmd.v1';
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) }catch(e){ return null } }
+function save(d){ try{ localStorage.setItem(KEY, JSON.stringify(d)) }catch(e){} }
+
+// Demo data so the prototype shows a realistic two weeks of use
+function seed(){
+  const mood=[2,2,3,2,3,3,2,3,4,3,4,4,3,4], crave=[8,7,7,8,6,6,7,5,5,4,4,3,4,3];
+  return {
+    checkins: mood.map((m,i)=>({mood:m, crave:crave[i]})),
+    goalsDone: 3,
+    coping: ['Text someone from my list','Go for a 10-min walk','Urge surfing (ride it out)','Call Mom','Leave the situation','Box breathing','Gym with Jordan'],
+    copingSel: [0,1,2,6],
+    badges: [
+      {i:'1',t:'First check-in',on:1},{i:'7',t:'7-day streak',on:1},{i:'Ask',t:'Reached out',on:1},{i:'Goal',t:'Goal done',on:1},
+      {i:'5',t:'5 days learning',on:1},{i:'Plan',t:'Plan finished',on:0},{i:'Mtg',t:'First meeting',on:0},{i:'30',t:'30 check-ins',on:0}
+    ]
+  };
+}
+let data = load() || seed(); save(data);
+
+// ---- render ----
+document.getElementById('chkStreak').textContent = data.checkins.length;
+document.getElementById('goalCount').textContent = data.goalsDone;
+document.getElementById('badgeCount').textContent = data.badges.filter(b=>b.on).length;
+
+document.getElementById('copeChips').innerHTML = data.coping.map((c,i)=>
+  `<span class="chip ${data.copingSel.includes(i)?'sel':''}">${c}</span>`).join('');
+
+document.getElementById('crave').innerHTML = Array.from({length:11},(_,i)=>
+  `<span class="${i===3?'sel':''}">${i}</span>`).join('');
+
+document.getElementById('badges').innerHTML = data.badges.map(b=>
+  `<div class="badge ${b.on?'':'locked'}"><div>${b.i}</div>${b.t}</div>`).join('');
+
+// SVG line chart: mood (1-5) and craving (0-10), both scaled to 0-1
+(function chart(){
+  const svg=document.getElementById('chart'), W=320,H=130,P=18, n=data.checkins.length;
+  const x=i=>P+(i*(W-2*P)/(n-1)), y=v=>H-P-v*(H-2*P);
+  const path=(vals)=>vals.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  let g='';
+  for(let k=0;k<=4;k++){ const yy=y(k/4); g+=`<line x1="${P}" x2="${W-P}" y1="${yy}" y2="${yy}" stroke="#eee"/>`; }
+  const m=data.checkins.map(c=>(c.mood-1)/4), c=data.checkins.map(c=>c.crave/10);
+  g+=`<path d="${path(c)}" fill="none" stroke="#e8a33d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  g+=`<path d="${path(m)}" fill="none" stroke="#1f6f6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  m.forEach((v,i)=>{ if(i===n-1) g+=`<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#1f6f6b"/>`; });
+  g+=`<text x="${P}" y="${H-2}" font-size="9" fill="#888">2 weeks ago</text><text x="${W-P}" y="${H-2}" font-size="9" fill="#888" text-anchor="end">today</text>`;
+  svg.innerHTML=g;
+})();
+
+// ---- routing ----
+function route(){
+  const v=(location.hash||'#home').slice(1);
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id===v));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on', a.dataset.v===v));
+  window.scrollTo(0,0);
+}
+addEventListener('hashchange',route); route();
+</script>
+</body>
+</html>
