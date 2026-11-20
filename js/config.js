@@ -15,5 +15,5 @@ NS.config = {
   // true: first-time visitors are offered "Try it with sample data" (showcase mode).
   DEMO: true,
   // Hosted URL (used in README and for the poster QR code). Fill in after deploying.
-  SITE_URL: ''
+  SITE_URL: 'https://apgneves.github.io/next-step-md/'
 };

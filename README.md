@@ -8,6 +8,8 @@ It has a recovery plan wizard with a printable summary, daily check-ins, a progr
 
 The full requirements are in `Next_Step_MD_Development_Spec.pdf`. `prototype.html` is the original single-file prototype (reference only).
 
+**Live site:** https://apgneves.github.io/next-step-md/ (poster QR code: `assets/qr.png`)
+
 ## Run it locally
 
 No build step and no dependencies.
